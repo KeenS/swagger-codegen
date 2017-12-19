@@ -696,7 +696,7 @@ fn add_routes<T>(router: &mut Router, api: T) where T: Api + Send + Sync + Clone
                 let param_param = if let Some(param_param_raw) = param_param { 
                     let deserializer = &mut serde_json::Deserializer::from_str(&param_param_raw);
 
-                    let param_param: Option<object> = serde_ignored::deserialize(deserializer, |path| {
+                    let param_param: Option<::serde_json::Value> = serde_ignored::deserialize(deserializer, |path| {
                             warn!("Ignoring unknown field in body: {}", path);
                             unused_elements.push(path.to_string());
                         }).map_err(|e| Response::with((status::BadRequest, format!("Couldn't parse body parameter param - doesn't match schema: {}", e))))?;

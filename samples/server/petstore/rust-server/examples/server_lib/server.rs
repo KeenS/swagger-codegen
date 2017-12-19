@@ -106,7 +106,7 @@ impl Api for Server {
     }
 
     /// test inline additionalProperties
-    fn test_inline_additional_properties(&self, param: object, context: &Context) -> Box<Future<Item=TestInlineAdditionalPropertiesResponse, Error=ApiError> + Send> {
+    fn test_inline_additional_properties(&self, param: ::serde_json::Value, context: &Context) -> Box<Future<Item=TestInlineAdditionalPropertiesResponse, Error=ApiError> + Send> {
         let context = context.clone();
         println!("test_inline_additional_properties({:?}) - X-Span-ID: {:?}", param, context.x_span_id.unwrap_or(String::from("<none>")).clone());
         Box::new(futures::failed("Generic failure".into()))

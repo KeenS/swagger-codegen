@@ -711,6 +711,8 @@ public class RustServerCodegen extends DefaultCodegen implements CodegenConfig {
             return datatype;
         } else if (p instanceof FileProperty) {
             return typeMapping.get("File").toString();
+        } else if (p instanceof ObjectProperty) {
+          return "::serde_json::Value";
         }
         return super.getTypeDeclaration(p);
     }

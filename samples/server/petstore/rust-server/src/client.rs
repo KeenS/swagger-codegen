@@ -657,7 +657,7 @@ impl Api for Client {
         Box::new(futures::done(result))
     }
 
-    fn test_inline_additional_properties(&self, param_param: object, context: &Context) -> Box<Future<Item=TestInlineAdditionalPropertiesResponse, Error=ApiError> + Send> {
+    fn test_inline_additional_properties(&self, param_param: ::serde_json::Value, context: &Context) -> Box<Future<Item=TestInlineAdditionalPropertiesResponse, Error=ApiError> + Send> {
 
 
         let url = format!(
