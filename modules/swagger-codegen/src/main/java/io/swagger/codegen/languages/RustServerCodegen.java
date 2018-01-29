@@ -440,6 +440,14 @@ public class RustServerCodegen extends DefaultCodegen implements CodegenConfig {
         return input.replace("*/", "*_/").replace("/*", "/_*");
     }
 
+    boolean isMimetypeXml(String mimetype) {
+        return mimetype.toLowerCase().startsWith("application/xml");
+    }
+
+    boolean isMimetypePlainText(String mimetype) {
+        return mimetype.toLowerCase().startsWith("text/plain");
+    }
+
     @Override
     public CodegenOperation fromOperation(String path, String httpMethod, Operation operation, Map<String, Model> definitions, Swagger swagger) {
         CodegenOperation op = super.fromOperation(path, httpMethod, operation, definitions, swagger);
@@ -528,14 +536,13 @@ public class RustServerCodegen extends DefaultCodegen implements CodegenConfig {
         // if "consumes" is defined (per operation or using global definition)
         if (consumes != null && !consumes.isEmpty()) {
             List<Map<String, String>> c = new ArrayList<Map<String, String>>();
-            for (String key : consumes) {
+            for (String mimeType : consumes) {
                 Map<String, String> mediaType = new HashMap<String, String>();
-                String mimeType = processMimeType(key);
 
-                if (mimeType.startsWith("Application/Xml")) {
+                if (isMimetypeXml(mimeType)) {
                     additionalProperties.put("usesXml", true);
                     consumesXml = true;
-                } else if (mimeType.startsWith("Text/Plain")) {
+                } else if (isMimetypePlainText(mimeType)) {
                     consumesPlainText = true;
                 }
 
@@ -562,14 +569,13 @@ public class RustServerCodegen extends DefaultCodegen implements CodegenConfig {
         boolean producesPlainText = false;
         if (produces != null && !produces.isEmpty()) {
             List<Map<String, String>> c = new ArrayList<Map<String, String>>();
-            for (String key : produces) {
+            for (String mimeType : produces) {
                 Map<String, String> mediaType = new HashMap<String, String>();
-                String mimeType = processMimeType(key);
 
-                if (mimeType.startsWith("Application/Xml")) {
+                if (isMimetypeXml(mimeType)) {
                     additionalProperties.put("usesXml", true);
                     producesXml = true;
-                } else if (mimeType.startsWith("Text/Plain")) {
+                } else if (isMimetypePlainText(mimeType)) {
                     producesPlainText = true;
                 }
 
@@ -622,9 +628,18 @@ public class RustServerCodegen extends DefaultCodegen implements CodegenConfig {
             param.vendorExtensions.put("typeName", toModelName(param.baseName));
         }
         for (CodegenResponse rsp : op.responses) {
-            rsp.message = camelize(rsp.message.split("[^A-Za-z ]")[0].replace(" ", "_"));
+            String[] words = rsp.message.split("[^A-Za-z ]");
+            String responseId;
+            if (rsp.vendorExtensions.containsKey("x-responseId")) {
+                responseId = (String)rsp.vendorExtensions.get("x-responseId");
+            } else if (words.length != 0) {
+                responseId = camelize(words[0].replace(" ", "_"));
+            } else {
+                responseId = "Status" + rsp.code;
+            }
+            rsp.vendorExtensions.put("x-responseId", responseId);
+            rsp.vendorExtensions.put("x-uppercaseResponseId", underscore(responseId).toUpperCase());
             rsp.vendorExtensions.put("uppercase_operation_id", underscore(op.operationId).toUpperCase());
-            rsp.vendorExtensions.put("uppercase_message", underscore(rsp.message).toUpperCase());
             if (rsp.dataType != null) {
                 rsp.vendorExtensions.put("uppercase_data_type", (rsp.dataType.replace("models::", "")).toUpperCase());
 
@@ -1015,58 +1030,5 @@ public class RustServerCodegen extends DefaultCodegen implements CodegenConfig {
             }
         }
         return false;
-    }
-
-    private String processMimeType(String mimeType){
-        // Transform mime type into a form that the hyper mime! macro can handle.
-        String result = "";
-
-        String[] split_attributes = mimeType.split(";");
-        String media = split_attributes[0];
-        String[] mediaTypes = media.split("/");
-
-        if (mediaTypes.length == 2) {
-
-            if (mediaTypes[0].equals("*")){
-                result += "Star";
-            } else {
-                result += escapeText(escapeQuotationMark(initialCaps(mediaTypes[0])));
-            }
-
-            result += "/";
-
-            if (mediaTypes[1].equals("*")) {
-                result += "Star";
-            } else {
-                result += escapeText(escapeQuotationMark(initialCaps(mediaTypes[1])));
-            }
-        } else {
-            LOGGER.error("Failed to parse media type: "
-                         + mimeType
-                         + ", media types should have exactly one /");
-        }
-
-        if (split_attributes.length == 2) {
-            String attributes = "";
-            String[] attrs = split_attributes[1].split(",");
-
-            for (String attr : attrs) {
-                String[] keyValuePair =attr.split("=");
-                if (keyValuePair.length == 2) {
-                    attributes += "(\""
-                                + escapeText(escapeQuotationMark(keyValuePair[0].trim()))
-                                + "\")=(\""
-                                + escapeText(escapeQuotationMark(keyValuePair[1].trim()))
-                                + "\")";
-                } else {
-                    LOGGER.error("Failed to parse parameter attributes: "
-                                 + split_attributes[1]
-                                 + ", attributes must be a comma separated list of 'key=value' pairs");
-                }
-            }
-            result += "; " + attributes;
-        }
-
-        return result;
     }
 }
